@@ -19,12 +19,7 @@ from urllib.request import urlopen
 pitcher_categories = ['RK', 'PLAYER', 'TEAM', 'GP', 'GS', 'IP', 'H', 'R', 'ER', 'BB', 'SO', 'W', 'L', 'SV', 'HLD', 'BLSV', 'WHIP', 'ERA']
 batter_categories = ['RK', 'PLAYER', 'TEAM', 'AB', 'R', 'H', '2B', '3B', 'HR', 'RBI', 'SB', 'CS', 'BB', 'SO', 'AVG', 'OBP', 'SLG', 'OPS']
 
-def parse_table(year, pitching, count = 1, players = {}):
-    playerType = "batting"
-    categories = batter_categories
-    if pitching:
-        playerType = "pitching"
-        categories = pitcher_categories
+def parse_table(year, playerType, categories, count = 1, players = {}):
     url = "https://www.espn.com/mlb/stats/{}/_/year/{}/count/{}/qualified/true"
     try:
         dataPage = urlopen(url.format(playerType, year, count))
@@ -59,8 +54,61 @@ def parse_table(year, pitching, count = 1, players = {}):
                 playerData[categories[tracker]] = value
             tracker = tracker + 1
         players[name] = playerData
-    return parse_table(year, pitching, count + 40, players)
+    return parse_table(year, playerType, categories, count + 40, players)
 
+def importdata(filename):
+    try:
+        with open(filename) as f:
+            data = f.readlines()
+    except IOError:
+        raise
+    data = [x.strip() for x in data]
+    categories = data[0].split(",")[1:]
+    players = {}
+    for line in data[1:]:
+        player = line.split(",")
+        playerdata = {}
+        for stat in range(len(categories)):
+            text = player[stat + 1]
+            if stat and text.isnumeric():
+                playerdata[categories[stat]] = int(text)
+            elif stat:
+                playerdata[categories[stat]] = float(text)
+            else:
+                playerdata[categories[stat]] = text
+        players[player[0]] = playerdata
+    return players
+
+def exportdata(data, filename, pitching):
+    if pitching:
+        categorystring = ",".join(pitcher_categories[1:])
+    else:
+        categorystring = ",".join(batter_categories[1:])
+    targetfile = open(filename, "w")
+    targetfile.write(categorystring + "\n")
+    for name, playerstats in data.items():
+        playerstring = name + ","
+        playerdata = []
+        for stat in playerstats.values():
+            playerdata.append(str(stat))
+        datastring = ",".join(playerdata)
+        targetfile.write(playerstring + datastring + "\n")
+    targetfile.close()
+
+def playerdata(year, pitching, export = True):
+    playerType = "batting"
+    categories = batter_categories
+    if pitching:
+        playerType = "pitching"
+        categories = pitcher_categories
+    filename = str(year) + playerType + ".csv"
+    try:
+        return importdata(filename)
+    except:
+        data = parse_table(year, playerType, categories)
+        if export:
+            exportdata(data, filename, pitching)
+        return data
 #tests
 #batters = parse_table(2017, False)
 #pitchers = parse_table(2017, True)

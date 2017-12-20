@@ -1,4 +1,4 @@
-from espnscraper import parse_table
+from espnscraper import playerdata, batter_categories, pitcher_categories
 import numpy as np
 
 #Goal: Predict players fantasy contributions based on previous seasons
@@ -7,15 +7,19 @@ import numpy as np
 
 batter_fantasy_categories = ['R', 'HR', 'RBI', 'SB', 'AVG']
 pitcher_fantasy_categories = ['W', 'SV', 'SO', 'ERA', 'WHIP']
+mode = False
 batters = []
-startyear = 2017
+pitchers = []
+startyear = 2014
 endyear = 2017
 mean = []
 exsqr = []
 
 def collect():
+    data = []
     for year in range(endyear - startyear + 1):
-        batters.append(parse_table(year + startyear, False))
+        print("Collecting data for " + str(year + startyear))
+        batters.append(playerdata(year + startyear, mode))
         yearmean = {}
         yearexsqr = {}
         count = float(len(batters[year]))
@@ -30,6 +34,7 @@ def collect():
                         yearexsqr[stat] = ((value**2)/count)
         mean.append(yearmean)
         exsqr.append(yearexsqr)
+
 
 def standardize():
     for year in range(endyear - startyear + 1):
@@ -52,5 +57,3 @@ def fantasy_rank():
         rank += 1
 
 collect()
-standardize()
-fantasy_rank()
