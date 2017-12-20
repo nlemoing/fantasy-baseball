@@ -33,15 +33,18 @@ print("Standardizing player data...")
 #Outputs
 for year in range(endyear - startyear + 1):
     for playerstats in batters[year].values():
-        fantasy_value = 0
         for stat, value in playerstats.items():
             if stat in statistics[year]:
                 playerstats[stat] /= statistics[year][stat]
-            if stat in batter_fantasy_categories:
-                fantasy_value += playerstats[stat]
-        playerstats["Fantasy"] = fantasy_value
+        playerstats["Fantasy"] = 0
+        for cat in batter_fantasy_categories:
+            playerstats["Fantasy"] += playerstats[cat]
 print("Player data standardized!")
 #print("Getting data for NN...")
 #plan: convert batter data to a numpy array
 #input array is the standardized data we scraped
 #output array is the standardized fantasy data
+rank = 1
+for key in sorted(batters[endyear-startyear], key = lambda x: batters[endyear-startyear][x]["Fantasy"], reverse=True):
+    print(str(rank) + ". " + key + " (" + str(batters[endyear-startyear][key]["Fantasy"]) + ")")
+    rank += 1
