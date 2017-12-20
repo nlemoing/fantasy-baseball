@@ -7,44 +7,50 @@ import numpy as np
 
 batter_fantasy_categories = ['R', 'HR', 'RBI', 'SB', 'AVG']
 pitcher_fantasy_categories = ['W', 'SV', 'SO', 'ERA', 'WHIP']
-print("Collecting data...")
 batters = []
 startyear = 2017
 endyear = 2017
-statistics = []
-for year in range(endyear - startyear + 1):
-    print("Year: " + str(year + startyear))
-    batters.append(parse_table(year + startyear, False))
-    print("Aggregating yearly data...")
-    yearstats = {}
-    count = float(len(batters[year]))
-    for name, playerstats in batters[year].items():
-        for stat, value in playerstats.items():
-            if not isinstance(value, str):
-                if stat in yearstats:
-                    yearstats[stat] += (value/count)
-                else:
-                    yearstats[stat] = (value/count)
-    statistics.append(yearstats)
-print("Data collection complete!")
+mean = []
+exsqr = []
 
-print("Standardizing player data...")
+def collect():
+    for year in range(endyear - startyear + 1):
+        batters.append(parse_table(year + startyear, False))
+        yearmean = {}
+        yearexsqr = {}
+        count = float(len(batters[year]))
+        for name, playerstats in batters[year].items():
+            for stat, value in playerstats.items():
+                if not isinstance(value, str):
+                    if stat in yearmean:
+                        yearmean[stat] += (value/count)
+                        yearexsqr[stat] += ((value**2)/count)
+                    else:
+                        yearmean[stat] = (value/count)
+                        yearexsqr[stat] = ((value**2)/count)
+        mean.append(yearmean)
+        exsqr.append(yearexsqr)
 
-#Outputs
-for year in range(endyear - startyear + 1):
-    for playerstats in batters[year].values():
-        for stat, value in playerstats.items():
-            if stat in statistics[year]:
-                playerstats[stat] /= statistics[year][stat]
-        playerstats["Fantasy"] = 0
-        for cat in batter_fantasy_categories:
-            playerstats["Fantasy"] += playerstats[cat]
-print("Player data standardized!")
-#print("Getting data for NN...")
+def standardize():
+    for year in range(endyear - startyear + 1):
+        for playerstats in batters[year].values():
+            for stat, value in playerstats.items():
+                if stat in mean[year]:
+                    playerstats[stat] -= mean[year][stat]
+                    playerstats[stat] /= (exsqr[year][stat] - (mean[year][stat]**2))**0.5
+            playerstats["Fantasy"] = 0
+            for cat in batter_fantasy_categories:
+                playerstats["Fantasy"] += playerstats[cat]
+
 #plan: convert batter data to a numpy array
 #input array is the standardized data we scraped
 #output array is the standardized fantasy data
-rank = 1
-for key in sorted(batters[endyear-startyear], key = lambda x: batters[endyear-startyear][x]["Fantasy"], reverse=True):
-    print(str(rank) + ". " + key + " (" + str(batters[endyear-startyear][key]["Fantasy"]) + ")")
-    rank += 1
+def fantasy_rank():
+    rank = 1
+    for key in sorted(batters[endyear-startyear], key = lambda x: batters[endyear-startyear][x]["Fantasy"], reverse=True):
+        print(str(rank) + ". " + key + " (" + str(batters[endyear-startyear][key]["Fantasy"]) + ")")
+        rank += 1
+
+collect()
+standardize()
+fantasy_rank()
