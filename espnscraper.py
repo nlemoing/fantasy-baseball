@@ -20,7 +20,11 @@ pitcher_categories = ['RK', 'PLAYER', 'TEAM', 'GP', 'GS', 'IP', 'H', 'R', 'ER', 
 batter_categories = ['RK', 'PLAYER', 'TEAM', 'AB', 'R', 'H', '2B', '3B', 'HR', 'RBI', 'SB', 'CS', 'BB', 'SO', 'AVG', 'OBP', 'SLG', 'OPS']
 
 def parse_table(year, playerType, categories, count = 1, players = {}):
-    url = "https://www.espn.com/mlb/stats/{}/_/year/{}/count/{}/qualified/true"
+    url = "https://www.espn.com/mlb/stats/{}/_/year/{}/count/{}/order/false/"
+    if playerType == "pitching":
+        url = url + "minip/50"
+    else:
+        url = url + "minpa/300"
     try:
         dataPage = urlopen(url.format(playerType, year, count))
     except:
