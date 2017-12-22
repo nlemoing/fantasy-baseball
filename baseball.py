@@ -9,45 +9,34 @@ import sys
 batter_fantasy_categories = ['R', 'HR', 'RBI', 'SB', 'AVG']
 pitcher_fantasy_categories = ['W', 'SV', 'SO', 'ERA', 'WHIP']
 #data containers
-players = []
+players = {}
 mean = []
 exsqr = []
 #inputs
 mode = False
-exporting = True
 startyear = 2017
 endyear = startyear
-#handle command line arguments
-for count in range(len(sys.argv)):
-    arg = sys.argv[count]
-    if arg == "noexp":
-        exporting = False
-    elif arg == "pitching":
-        mode = True
-    elif arg == "batting":
-        mode = False
-    elif arg == "start":
-        try:
-            startyear = int(sys.argv[count + 1])
-        except:
-            pass
-    elif arg == "end":
-        try:
-            endyear = int(sys.argv[count + 1])
-        except:
-            pass
-if endyear < startyear:
-    endyear = startyear
-if mode:
-    print("Mode selected: Pitching")
-else:
-    print("Mode selected: Batting")
+fantasycategories = []
 
-def collect():
-    data = []
-    for year in range(endyear - startyear + 1):
-        print("Collecting data for " + str(year + startyear))
-        players.append(playerdata(year + startyear, mode, exporting))
+def initialize(s, e, m, exp = True):
+    global mode, startyear, endyear, fantasycategories, players
+    players = {}
+    mode = m
+    startyear = s
+    endyear = e
+    if endyear < startyear:
+        endyear = startyear
+    if mode:
+        fantasycategories = pitcher_fantasy_categories
+    else:
+        fantasycategories = batter_fantasy_categories
+    collect(exp)
+    standardize()
+
+def collect(exp):
+    for year in range(startyear, endyear + 1):
+        print("Collecting data for " + str(year))
+        players[year] = playerdata(year, mode, exp)
         yearmean = {}
         yearexsqr = {}
         count = float(len(players[year]))
@@ -60,35 +49,49 @@ def collect():
                     else:
                         yearmean[stat] = (value/count)
                         yearexsqr[stat] = ((value**2)/count)
-        print(yearmean)
-        print(yearexsqr)
         mean.append(yearmean)
         exsqr.append(yearexsqr)
 
 def standardize():
     for year in range(endyear - startyear + 1):
-        for playerstats in players[year].values():
+        for playerstats in players[year + startyear].values():
             for stat, value in playerstats.items():
                 if stat in mean[year]:
                     playerstats[stat] -= mean[year][stat]
                     playerstats[stat] /= (exsqr[year][stat] - (mean[year][stat]**2))**0.5
                 if stat == "ERA" or stat == "WHIP":
                     playerstats[stat] *= -1
-            playerstats["Fantasy"] = 0
-            if mode:
-                fantasycategories = pitcher_fantasy_categories
-            else:
-                fantasycategories = batter_fantasy_categories
-            for cat in fantasycategories:
-                playerstats["Fantasy"] += playerstats[cat]
 
 #plan: convert batter data to a numpy array
 #input array is the standardized data we scraped
 #output array is the standardized fantasy data
-def fantasyrank(year):
+def fantasy(year):
+    for player in players[year].values():
+        player["Fantasy"] = 0
+        for cat in fantasycategories:
+            playerstats["Fantasy"] += playerstats[cat]
     rank = 1
-    for key in sorted(players[year-startyear], key = lambda x: players[endyear-startyear][x]["Fantasy"], reverse=True):
-        print(str(rank) + ". " + key + " (" + str(players[endyear-startyear][key]["Fantasy"]) + ")")
+    for key in sorted(players[year], key = lambda x: players[year][x]["Fantasy"], reverse=True):
+        print(str(rank) + ". " + key + " (" + str(players[year][key]["Fantasy"]) + ")")
         rank += 1
 
+#transform target year to dictionary of lists (just raw data)
+def converttolist(year, fantasyonly):
+    ret = {}
+    for name, playerstats in players[year].items():
+        data = []
+        for stat, value in playerstats.items():
+            if isinstance(value, str) or (fantasyonly and not stat in fantasycategories):
+                continue
+            data.append(value)
+        ret[name] = data
+    return ret
 
+def getoutput():
+    return converttolist(endyear, True)
+
+def getinput():
+    inp = []
+    for year in range(startyear, endyear):
+        inp.append(converttolist(year, False))
+    return inp
