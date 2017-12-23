@@ -1,6 +1,5 @@
-from espnscraper import playerdata, batter_categories, pitcher_categories
+from espnscraper import playerdata
 import numpy as np
-import sys
 
 #Goal: Predict players fantasy contributions based on previous seasons
 #Methodology: Aggregate data from previous years and build a neural network to predict data from current years
@@ -18,9 +17,8 @@ startyear = 2017
 endyear = startyear
 fantasycategories = []
 
-def initialize(s, e, m, exp = True):
+def initialize(s, e, m, exp = True, std = True):
     global mode, startyear, endyear, fantasycategories, players
-    players = {}
     mode = m
     startyear = s
     endyear = e
@@ -31,11 +29,12 @@ def initialize(s, e, m, exp = True):
     else:
         fantasycategories = batter_fantasy_categories
     collect(exp)
-    standardize()
+    if std:
+        standardize()
 
 def collect(exp):
     for year in range(startyear, endyear + 1):
-        print("Collecting data for " + str(year))
+        print("Collecting data for {}...".format(year))
         players[year] = playerdata(year, mode, exp)
         yearmean = {}
         yearexsqr = {}
@@ -70,9 +69,13 @@ def fantasy(year):
         player["Fantasy"] = 0
         for cat in fantasycategories:
             playerstats["Fantasy"] += playerstats[cat]
+
+def search(year, category, count = 10):
     rank = 1
-    for key in sorted(players[year], key = lambda x: players[year][x]["Fantasy"], reverse=True):
-        print(str(rank) + ". " + key + " (" + str(players[year][key]["Fantasy"]) + ")")
+    for key in sorted(players[year], key = lambda x: players[year][x][category], reverse=True):
+        if rank > count:
+            break
+        print(str(rank) + ". " + key + " (" + str(players[year][key][category]) + ")")
         rank += 1
 
 #transform target year to dictionary of lists (just raw data)
@@ -95,3 +98,4 @@ def getinput():
     for year in range(startyear, endyear):
         inp.append(converttolist(year, False))
     return inp
+

@@ -6,8 +6,8 @@ class Network:
     def __init__(self, sizes):
         self.sizes = sizes
         self.numlayers = len(sizes)
-        self.biases = [np.random.randn(y, 1) for y in sizes[1:]]
-        self.weights = [np.random.randn(y, x) for x, y in zip(sizes[:-1], sizes[1:])]
+        self.biases = [np.random.uniform(high=0.1, size=(y, 1)) for y in sizes[1:]]
+        self.weights = [np.random.uniform(high=0.1, size=(y, x)) for x, y in zip(sizes[:-1], sizes[1:])]
     def propagate(self, inp, out, lr):
         z = inp
         zs = [inp]
@@ -38,25 +38,27 @@ class Network:
         error /= count
         return error
 
-def neural(targetyear, projectionyears, pitching, epoch):
+
+def neural(startyear, targetyear, projectionyears, pitching, epoch):
     #aggregate training data
-    initialize(targetyear - projectionyears, targetyear, pitching) #initialize baseball data
-    targetdata = getoutput()
-    projectiondata = getinput()
     trainingdata = []
     outputsize = 5
     inputsize = 15 * projectionyears
     hiddensize = (outputsize + inputsize)//2
-    for name in targetdata.keys():
-        inp = []
-        try:
-            for year in range(projectionyears):
-                inp.extend(projectiondata[year][name])
-            out = targetdata[name]
-            data = (np.matrix(inp).transpose(), np.matrix(out).transpose())
-            trainingdata.append(data)
-        except KeyError:
-            continue
+    for year in range(startyear, targetyear - projectionyears + 1):
+        initialize(year, year + projectionyears, pitching) #initialize baseball data
+        targetdata = getoutput()
+        projectiondata = getinput()
+        for name in targetdata.keys():
+            inp = []
+            try:
+                for year in range(projectionyears):
+                    inp.extend(projectiondata[year][name])
+                out = targetdata[name]
+                data = (np.matrix(inp).transpose(), np.matrix(out).transpose())
+                trainingdata.append(data)
+            except KeyError:
+                continue
     net = Network([inputsize, hiddensize, outputsize])
     for it in range(epoch):
         for data in trainingdata:
@@ -64,4 +66,4 @@ def neural(targetyear, projectionyears, pitching, epoch):
         error = net.mse(trainingdata)
         print("Epoch {} error: {}".format(it + 1, error))
 
-neural(2017, 3, False, 50)
+neural(2010, 2017, 3, False, 60)
